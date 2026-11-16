@@ -1,5 +1,35 @@
 #include "shell.h"
+char* history[HISTORY_SIZE];
+int history_count = 0;
 
+void add_history_cmd(const char* cmd) {
+    // Khali command ya sirf spaces ko history mein save na karein
+    if (cmd == NULL || strlen(cmd) == 0) return;
+
+    if (history_count < HISTORY_SIZE) {
+        history[history_count++] = strdup(cmd);
+    } else {
+        // Agar 20 commands poori ho jayein to sab se purani (index 0) free kar ke shift karein
+        free(history[0]);
+        for (int i = 1; i < HISTORY_SIZE; i++) {
+            history[i - 1] = history[i];
+        }
+        history[HISTORY_SIZE - 1] = strdup(cmd);
+    }
+}
+
+void print_history() {
+    for (int i = 0; i < history_count; i++) {
+        printf("%d  %s\n", i + 1, history[i]);
+    }
+}
+
+char* get_history_cmd(int n) {
+    if (n < 1 || n > history_count) {
+        return NULL; // Out of bounds
+    }
+    return strdup(history[n - 1]); // Nayi copy return karein taake main loop mein safely free ho sake
+}
 char* read_cmd(char* prompt, FILE* fp) {
     printf("%s", prompt);
     char* cmdline = (char*) malloc(sizeof(char) * MAX_LEN);
@@ -99,6 +129,10 @@ int handle_builtin(char** arglist) {
     // 4. jobs command (placeholder)
     if (strcmp(arglist[0], "jobs") == 0) {
         printf("Job control not yet implemented.\n");
+        return 1;
+    }
+    if (strcmp(arglist[0], "history") == 0) {
+        print_history();
         return 1;
     }
 
