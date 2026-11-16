@@ -60,3 +60,47 @@ char** tokenize(char* cmdline) {
     arglist[argnum] = NULL;
     return arglist;
 }
+int handle_builtin(char** arglist) {
+    if (arglist == NULL || arglist[0] == NULL) {
+        return 0;
+    }
+
+    // 1. exit command
+    if (strcmp(arglist[0], "exit") == 0) {
+        exit(0);
+    }
+
+    // 2. cd <directory> command
+    if (strcmp(arglist[0], "cd") == 0) {
+        if (arglist[1] == NULL) {
+            // Agar user sirf 'cd' likhe to HOME directory mein jayein
+            char* home = getenv("HOME");
+            if (home == NULL || chdir(home) != 0) {
+                perror("cd");
+            }
+        } else {
+            if (chdir(arglist[1]) != 0) {
+                perror("cd"); // Agar directory exist na karti ho to error print karega
+            }
+        }
+        return 1;
+    }
+
+    // 3. help command
+    if (strcmp(arglist[0], "help") == 0) {
+        printf("Built-in commands:\n");
+        printf("  cd <dir>  - Change the current working directory\n");
+        printf("  exit      - Terminate the shell\n");
+        printf("  help      - Display this help message\n");
+        printf("  jobs      - List active background jobs\n");
+        return 1;
+    }
+
+    // 4. jobs command (placeholder)
+    if (strcmp(arglist[0], "jobs") == 0) {
+        printf("Job control not yet implemented.\n");
+        return 1;
+    }
+
+    return 0; // Built-in command nahi hai, external command ke tor par chalayein
+}
