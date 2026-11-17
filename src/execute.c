@@ -61,7 +61,23 @@ void run_command_with_redirection(char** args) {
 }
 
 int execute(char* arglist[]) {
-    // Check karein ke command mein pipe '|' hai ya nahi
+    if (arglist[0] == NULL) return 0;
+
+    // 1. Check karein ke aakhri argument '&' hai ya nahi (Background Execution)
+    int background = 0;
+    int last_idx = 0;
+    while (arglist[last_idx] != NULL) {
+        last_idx++;
+    }
+    if (last_idx > 0 && strcmp(arglist[last_idx - 1], "&") == 0) {
+        background = 1;
+        free(arglist[last_idx - 1]); // Memory free karein taake leak na ho
+        arglist[last_idx - 1] = NULL;
+    }
+
+    if (arglist[0] == NULL) return 0;
+
+    // 2. Check karein ke command mein pipe '|' hai ya nahi
     int pipe_idx = -1;
     for (int i = 0; arglist[i] != NULL; i++) {
         if (strcmp(arglist[i], "|") == 0) {
@@ -105,11 +121,16 @@ int execute(char* arglist[]) {
             run_command_with_redirection(right_args);
         }
 
-        // Parent Process: Dono pipe ends band karein aur dono children ka wait karein
+        // Parent Process: Dono pipe ends band karein
         close(pipefd[0]);
         close(pipefd[1]);
-        waitpid(pid1, NULL, 0);
-        waitpid(pid2, NULL, 0);
+
+        if (background) {
+            add_job(pid2, right_args[0]);
+        } else {
+            waitpid(pid1, NULL, 0);
+            waitpid(pid2, NULL, 0);
+        }
         return 0;
     }
 
@@ -124,8 +145,15 @@ int execute(char* arglist[]) {
             run_command_with_redirection(arglist);
             break;
         default:
-            waitpid(cpid, &status, 0);
-            return status;
+            if (background) {
+                // Background job: waitpid() nahi chalayenge, list mein add kar denge
+                add_job(cpid, arglist[0]);
+            } else {
+                // Foreground job: child ke khatam hone ka intezar karenge
+                waitpid(cpid, &status, 0);
+                return status;
+            }
+            break;
     }
     return 0;
 }

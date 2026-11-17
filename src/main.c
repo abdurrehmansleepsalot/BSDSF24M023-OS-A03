@@ -4,17 +4,21 @@ int main() {
     char* cmdline;
     char** arglist;
 
-    // Default filename completion enable rehta hai, explicitly bind karne ke liye:
     rl_bind_key('\t', rl_complete);
 
-    while ((cmdline = readline(PROMPT)) != NULL) {
-        // Skip empty lines (readline trailing '\n' khud hi hata deta hai)
+    while (1) {
+        // Task 4: Naya prompt dikhane se pehle finished background jobs ko reap karein
+        reap_zombies();
+
+        cmdline = readline(PROMPT);
+        if (cmdline == NULL) break; // Ctrl+D
+
         if (strlen(cmdline) == 0) {
             free(cmdline);
             continue;
         }
 
-        // Feature-3: !n Re-execution check
+        // !n Re-execution check
         if (cmdline[0] == '!') {
             int n = atoi(&cmdline[1]);
             char* hist_cmd = get_history_cmd(n);
@@ -28,21 +32,26 @@ int main() {
             cmdline = hist_cmd;
         }
 
-        // Dono history systems update karein:
-        add_history(cmdline);      // GNU Readline (Up/Down arrow keys ke liye)
-        add_history_cmd(cmdline);  // Feature-3 (custom 'history' aur '!n' ke liye)
+        add_history(cmdline);
+        add_history_cmd(cmdline);
 
-        if ((arglist = tokenize(cmdline)) != NULL) {
-            if (!handle_builtin(arglist)) {
-                execute(arglist);
-            }
+        // Task 2: Semicolon (;) par commands ko split kar ke sequentially chalayein
+        char* saveptr;
+        char* subcmd = strtok_r(cmdline, ";", &saveptr);
+        while (subcmd != NULL) {
+            if ((arglist = tokenize(subcmd)) != NULL) {
+                if (!handle_builtin(arglist)) {
+                    execute(arglist);
+                }
 
-            // Free the memory allocated by tokenize()
-            for (int i = 0; arglist[i] != NULL; i++) {
-                free(arglist[i]);
+                for (int i = 0; arglist[i] != NULL; i++) {
+                    free(arglist[i]);
+                }
+                free(arglist);
             }
-            free(arglist);
+            subcmd = strtok_r(NULL, ";", &saveptr);
         }
+
         free(cmdline);
     }
 

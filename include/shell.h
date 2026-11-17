@@ -18,6 +18,18 @@
 #include <readline/history.h>
 #include <fcntl.h>
 
+#define MAX_JOBS 64
+
+typedef struct {
+    pid_t pid;
+    char cmd[256];
+} Job;
+
+void add_job(pid_t pid, const char* cmd);
+void remove_job(pid_t pid);
+void reap_zombies();
+void print_jobs();
+
 void add_history_cmd(const char* cmd);
 void print_history();
 char* get_history_cmd(int n);
