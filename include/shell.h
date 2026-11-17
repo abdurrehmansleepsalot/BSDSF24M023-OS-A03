@@ -33,6 +33,18 @@ void remove_job(pid_t pid);
 void reap_zombies();
 void print_jobs();
 
+typedef struct VarNode {
+    char* name;
+    char* value;
+    struct VarNode* next;
+} VarNode;
+
+void set_shell_var(const char* name, const char* value);
+const char* get_shell_var(const char* name);
+void print_shell_vars();
+void expand_variables(char** arglist);
+
+
 void add_history_cmd(const char* cmd);
 void print_history();
 char* get_history_cmd(int n);

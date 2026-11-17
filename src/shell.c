@@ -179,6 +179,31 @@ int handle_builtin(char** arglist) {
         print_history();
         return 1;
     }
+    // 6. set command
+    if (strcmp(arglist[0], "set") == 0) {
+        print_shell_vars();
+        return 1;
+    }
+
+    // 7. Variable assignment check: VARNAME=value (bina spaces ke)
+    char* eq_ptr = strchr(arglist[0], '=');
+    if (eq_ptr != NULL && eq_ptr != arglist[0] && arglist[1] == NULL) {
+        *eq_ptr = '\0';
+        char* var_name = arglist[0];
+        char* var_val = eq_ptr + 1;
+
+        // Agar value ke gird quotes ("...") hon to unhein strip kar dein
+        size_t vlen = strlen(var_val);
+        if (vlen >= 2 && ((var_val[0] == '"' && var_val[vlen - 1] == '"') ||
+            (var_val[0] == '\'' && var_val[vlen - 1] == '\''))) {
+            var_val[vlen - 1] = '\0';
+        var_val++;
+            }
+
+            set_shell_var(var_name, var_val);
+            *eq_ptr = '='; // Original string restore karein taake free() mein masla na ho
+            return 1;
+    }
 
     return 0; // Built-in command nahi hai, external command ke tor par chalayein
 }
@@ -203,6 +228,7 @@ int run_single_line(char* line) {
     while (subcmd != NULL) {
         char** arglist = tokenize(subcmd);
         if (arglist != NULL) {
+            expand_variables(arglist); // Execution se pehle $VAR expand karein
             if (arglist[0] != NULL) {
                 if (!handle_builtin(arglist)) {
                     last_status = execute(arglist);
@@ -308,4 +334,64 @@ void handle_if_block(char* first_line) {
     // Allocated memory free karein
     for (int i = 0; i < then_count; i++) free(then_cmds[i]);
     for (int i = 0; i < else_count; i++) free(else_cmds[i]);
+}
+
+
+VarNode* var_head = NULL;
+
+// Linked List mein variable add ya update karein
+void set_shell_var(const char* name, const char* value) {
+    VarNode* curr = var_head;
+    while (curr != NULL) {
+        if (strcmp(curr->name, name) == 0) {
+            free(curr->value);
+            curr->value = strdup(value);
+            return;
+        }
+        curr = curr->next;
+    }
+
+    VarNode* new_node = (VarNode*)malloc(sizeof(VarNode));
+    new_node->name = strdup(name);
+    new_node->value = strdup(value);
+    new_node->next = var_head;
+    var_head = new_node;
+}
+
+// Variable ki value lookup karein (pehle apni list mein, phir system environment mein)
+const char* get_shell_var(const char* name) {
+    VarNode* curr = var_head;
+    while (curr != NULL) {
+        if (strcmp(curr->name, name) == 0) {
+            return curr->value;
+        }
+        curr = curr->next;
+    }
+    char* env_val = getenv(name);
+    return (env_val != NULL) ? env_val : "";
+}
+
+// 'set' built-in command ke liye saare variables print karein
+void print_shell_vars() {
+    VarNode* curr = var_head;
+    if (curr == NULL) {
+        printf("No shell variables set.\n");
+        return;
+    }
+    while (curr != NULL) {
+        printf("%s=%s\n", curr->name, curr->value);
+        curr = curr->next;
+    }
+}
+
+// Tokenized arglist mein '$' se shuru hone wale arguments ko expand karein
+void expand_variables(char** arglist) {
+    if (arglist == NULL) return;
+    for (int i = 0; arglist[i] != NULL; i++) {
+        if (arglist[i][0] == '$' && strlen(arglist[i]) > 1) {
+            const char* val = get_shell_var(&arglist[i][1]);
+            free(arglist[i]); // Purana "$VAR" token free karein
+            arglist[i] = strdup(val); // Nayi value allocate karein
+        }
+    }
 }
