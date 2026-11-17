@@ -162,13 +162,16 @@ int handle_builtin(char** arglist) {
 
     // 3. help command
     if (strcmp(arglist[0], "help") == 0) {
-        printf("Built-in commands:\n");
-        printf("  cd <dir>  - Change the current working directory\n");
-        printf("  exit      - Terminate the shell\n");
-        printf("  help      - Display this help message\n");
-        printf("  jobs      - List active background jobs\n");
-        return 1;
-    }
+    printf("Built-in commands:\n");
+    printf("  cd <dir>      - Change the current working directory\n");
+    printf("  exit          - Terminate the shell\n");
+    printf("  help          - Display this help message\n");
+    printf("  jobs          - List active background jobs\n");
+    printf("  history       - Display command history\n");
+    printf("  set           - Display all shell variables\n");
+    printf("  VAR=value     - Set a shell variable\n");
+    return 1;
+}
 
     // 4. jobs command (placeholder)
     if (strcmp(arglist[0], "jobs") == 0) {
