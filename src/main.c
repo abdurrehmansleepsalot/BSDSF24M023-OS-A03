@@ -2,16 +2,14 @@
 
 int main() {
     char* cmdline;
-    char** arglist;
 
     rl_bind_key('\t', rl_complete);
 
     while (1) {
-        // Task 4: Naya prompt dikhane se pehle finished background jobs ko reap karein
         reap_zombies();
 
         cmdline = readline(PROMPT);
-        if (cmdline == NULL) break; // Ctrl+D
+        if (cmdline == NULL) break;
 
         if (strlen(cmdline) == 0) {
             free(cmdline);
@@ -35,21 +33,14 @@ int main() {
         add_history(cmdline);
         add_history_cmd(cmdline);
 
-        // Task 2: Semicolon (;) par commands ko split kar ke sequentially chalayein
-        char* saveptr;
-        char* subcmd = strtok_r(cmdline, ";", &saveptr);
-        while (subcmd != NULL) {
-            if ((arglist = tokenize(subcmd)) != NULL) {
-                if (!handle_builtin(arglist)) {
-                    execute(arglist);
-                }
+        // Check karein ke command 'if ' se shuru ho rahi hai ya nahi
+        char* check = cmdline;
+        while (*check == ' ' || *check == '\t') check++;
 
-                for (int i = 0; arglist[i] != NULL; i++) {
-                    free(arglist[i]);
-                }
-                free(arglist);
-            }
-            subcmd = strtok_r(NULL, ";", &saveptr);
+        if (strncmp(check, "if ", 3) == 0) {
+            handle_if_block(check);
+        } else {
+            run_single_line(cmdline);
         }
 
         free(cmdline);

@@ -18,6 +18,9 @@
 #include <readline/history.h>
 #include <fcntl.h>
 
+int run_single_line(char* line);
+void handle_if_block(char* first_line);
+
 #define MAX_JOBS 64
 
 typedef struct {

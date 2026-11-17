@@ -182,3 +182,130 @@ int handle_builtin(char** arglist) {
 
     return 0; // Built-in command nahi hai, external command ke tor par chalayein
 }
+// Leading spaces/tabs hatane ke liye chota helper
+char* trim_whitespace(char* str) {
+    while (*str == ' ' || *str == '\t') str++;
+    char* end = str + strlen(str) - 1;
+    while (end > str && (*end == ' ' || *end == '\t' || *end == '\n')) {
+        *end = '\0';
+        end--;
+    }
+    return str;
+}
+
+// Kisi bhi ek command line (including ';' chaining) ko chalane ke liye helper
+int run_single_line(char* line) {
+    int last_status = 0;
+    char* line_copy = strdup(line);
+    char* saveptr;
+    char* subcmd = strtok_r(line_copy, ";", &saveptr);
+
+    while (subcmd != NULL) {
+        char** arglist = tokenize(subcmd);
+        if (arglist != NULL) {
+            if (arglist[0] != NULL) {
+                if (!handle_builtin(arglist)) {
+                    last_status = execute(arglist);
+                } else {
+                    last_status = 0;
+                }
+            }
+            for (int i = 0; arglist[i] != NULL; i++) {
+                free(arglist[i]);
+            }
+            free(arglist);
+        }
+        subcmd = strtok_r(NULL, ";", &saveptr);
+    }
+
+    free(line_copy);
+    return last_status;
+}
+
+// Multi-line if-then-else-fi block handler
+void handle_if_block(char* first_line) {
+    char* trimmed = trim_whitespace(first_line);
+    // "if " ke baad wali condition command nikalein
+    char* cond_cmd = trim_whitespace(trimmed + 2);
+
+    if (strlen(cond_cmd) == 0) {
+        fprintf(stderr, "Syntax error: missing condition after 'if'\n");
+        return;
+    }
+
+    char* then_cmds[64];
+    char* else_cmds[64];
+    int then_count = 0;
+    int else_count = 0;
+
+    // State: 0 = waiting for 'then', 1 = reading 'then' block, 2 = reading 'else' block
+    int state = 0;
+
+    while (1) {
+        char* next_line = readline("> ");
+        if (next_line == NULL) {
+            fprintf(stderr, "Syntax error: unexpected EOF while looking for 'fi'\n");
+            break;
+        }
+
+        char* clean_line = trim_whitespace(next_line);
+        if (strlen(clean_line) == 0) {
+            free(next_line);
+            continue;
+        }
+
+        if (strcmp(clean_line, "then") == 0) {
+            if (state != 0) {
+                fprintf(stderr, "Syntax error: unexpected 'then'\n");
+                free(next_line);
+                break;
+            }
+            state = 1;
+            free(next_line);
+        } else if (strcmp(clean_line, "else") == 0) {
+            if (state != 1) {
+                fprintf(stderr, "Syntax error: unexpected 'else'\n");
+                free(next_line);
+                break;
+            }
+            state = 2;
+            free(next_line);
+        } else if (strcmp(clean_line, "fi") == 0) {
+            free(next_line);
+            break; // Block complete!
+        } else {
+            if (state == 1 && then_count < 64) {
+                then_cmds[then_count++] = strdup(clean_line);
+            } else if (state == 2 && else_count < 64) {
+                else_cmds[else_count++] = strdup(clean_line);
+            } else if (state == 0) {
+                fprintf(stderr, "Syntax error: expected 'then'\n");
+                free(next_line);
+                break;
+            }
+            free(next_line);
+        }
+    }
+
+    // Condition command execute karein aur exit status check karein
+    int raw_status = run_single_line(cond_cmd);
+    int exit_code = 1;
+    if (WIFEXITED(raw_status)) {
+        exit_code = WEXITSTATUS(raw_status);
+    }
+
+    // Exit code 0 = Success ('then' block), Non-zero = Failure ('else' block)
+    if (exit_code == 0) {
+        for (int i = 0; i < then_count; i++) {
+            run_single_line(then_cmds[i]);
+        }
+    } else {
+        for (int i = 0; i < else_count; i++) {
+            run_single_line(else_cmds[i]);
+        }
+    }
+
+    // Allocated memory free karein
+    for (int i = 0; i < then_count; i++) free(then_cmds[i]);
+    for (int i = 0; i < else_count; i++) free(else_cmds[i]);
+}
