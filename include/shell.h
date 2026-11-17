@@ -14,6 +14,8 @@
 #define ARGLEN 30
 #define PROMPT "FCIT> "
 #define HISTORY_SIZE 20
+#include <readline/readline.h>
+#include <readline/history.h>
 
 void add_history_cmd(const char* cmd);
 void print_history();

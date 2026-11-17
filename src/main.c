@@ -4,20 +4,17 @@ int main() {
     char* cmdline;
     char** arglist;
 
-    while ((cmdline = read_cmd(PROMPT, stdin)) != NULL) {
-        // Trailing newline ('\n') hatayein agar read_cmd ne lagaya hai
-        size_t len = strlen(cmdline);
-        if (len > 0 && cmdline[len - 1] == '\n') {
-            cmdline[len - 1] = '\0';
-        }
+    // Default filename completion enable rehta hai, explicitly bind karne ke liye:
+    rl_bind_key('\t', rl_complete);
 
-        // Skip empty lines
+    while ((cmdline = readline(PROMPT)) != NULL) {
+        // Skip empty lines (readline trailing '\n' khud hi hata deta hai)
         if (strlen(cmdline) == 0) {
             free(cmdline);
             continue;
         }
 
-        // Task 4: !n Re-execution check (tokenization aur history mein add karne se pehle)
+        // Feature-3: !n Re-execution check
         if (cmdline[0] == '!') {
             int n = atoi(&cmdline[1]);
             char* hist_cmd = get_history_cmd(n);
@@ -26,13 +23,14 @@ int main() {
                 free(cmdline);
                 continue;
             }
-            printf("%s\n", hist_cmd); // Re-execute hone wali command screen par dikhayein
+            printf("%s\n", hist_cmd);
             free(cmdline);
-            cmdline = hist_cmd; // Purani !n command ko retrieved command se replace karein
+            cmdline = hist_cmd;
         }
 
-        // Task 2: Command ko history mein add karein
-        add_history_cmd(cmdline);
+        // Dono history systems update karein:
+        add_history(cmdline);      // GNU Readline (Up/Down arrow keys ke liye)
+        add_history_cmd(cmdline);  // Feature-3 (custom 'history' aur '!n' ke liye)
 
         if ((arglist = tokenize(cmdline)) != NULL) {
             if (!handle_builtin(arglist)) {
