@@ -1,0 +1,7 @@
+total 20
+drwxrwxr-x 2 abdur abdur 4096 Nov 17 09:06 bin
+-rw-r--r-- 1 abdur abdur    0 Nov 17 09:06 file_list.txt
+drwxrwxr-x 2 abdur abdur 4096 Nov 17 09:01 include
+-rw-rw-r-- 1 abdur abdur  145 Nov 17 08:48 makefile
+-rw-rw-r-- 1 abdur abdur  812 Oct 14 00:49 README.md
+drwxrwxr-x 2 abdur abdur 4096 Nov 17 09:02 src
